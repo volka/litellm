@@ -90,6 +90,29 @@ def test_qwen_prompt_modifier_empty_messages_list_empty_tags_true():
     assert len(modified_messages) == 1
     assert modified_messages[0] == {"role": "assistant", "content": "<think>\n</think>"}
 
+def test_qwen_prompt_modifier_no_user_message_enable_thinking_true_empty_tags_true():
+    messages = [{"role": "assistant", "content": "I am ready."}]
+    modified_messages = qwen_thinking_prompt_modifier(messages, qwen_enable_thinking=True, qwen_use_empty_think_tags=True)
+    assert len(modified_messages) == 2
+    assert modified_messages[0] == {"role": "assistant", "content": "I am ready."} # Original assistant message
+    assert modified_messages[1] == {"role": "assistant", "content": "<think>\n</think>"} # Appended think block
+    # /think tag should not be added as there's no user message to prepend to.
+
+def test_qwen_prompt_modifier_no_user_message_enable_thinking_false_empty_tags_true():
+    messages = [{"role": "assistant", "content": "I am ready."}]
+    modified_messages = qwen_thinking_prompt_modifier(messages, qwen_enable_thinking=False, qwen_use_empty_think_tags=True)
+    assert len(modified_messages) == 2
+    assert modified_messages[0] == {"role": "assistant", "content": "I am ready."}
+    assert modified_messages[1] == {"role": "assistant", "content": "<think>\n</think>"}
+    # /no_think tag should not be added.
+
+def test_qwen_prompt_modifier_defaults_with_messages():
+    messages = [{"role": "user", "content": "Hello"}]
+    modified_messages = qwen_thinking_prompt_modifier(messages, qwen_enable_thinking=None, qwen_use_empty_think_tags=False)
+    assert modified_messages == messages
+
+    modified_messages_implicit_defaults = qwen_thinking_prompt_modifier(messages)
+    assert modified_messages_implicit_defaults == messages
 
 def test_qwen_prompt_modifier_multimodal_user_content_first_text_enable_true():
     messages = [
