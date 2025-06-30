@@ -2,17 +2,14 @@ from typing import List, Dict, Any, Optional
 
 def is_qwen3_model(model_name: str) -> bool:
     """
-    Identifies if the given model_name pertains to a Qwen3-era model.
-    Checks for "qwen3" or "qwen2.5".
+    Identifies if the given model_name pertains to a Qwen3 model.
+    Checks for "qwen3".
     """
     if not model_name:
         return False
     lower_model_name = model_name.lower()
     # Primary trigger
     if "qwen3" in lower_model_name:
-        return True
-    # Aliases or related models that use the same thinking mechanism
-    if "qwen2.5" in lower_model_name: # As mentioned in issue for Qwen3 family
         return True
     # Add other specific qwen3 identifiers if known
     # e.g., if "qwen3-7b-instruct" is a common full name

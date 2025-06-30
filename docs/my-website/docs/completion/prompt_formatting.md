@@ -87,7 +87,7 @@ Here's the code for how we format all providers. Let us know how we can improve 
 
 ## Qwen3 Model Thinking Tags
 
-For Qwen3-era models (e.g., models with "qwen3" or "qwen2.5" in their names), LiteLLM provides a way to control the model's "thinking" process by injecting specific tags into the prompt. This is useful when Qwen3 models are accessed via providers like Ollama or Hugging Face Inference Endpoints, where direct manipulation of `tokenizer.apply_chat_template` parameters (like `enable_thinking`) is not possible through LiteLLM.
+For Qwen3 models (e.g., models with "qwen3" in their names), LiteLLM provides a way to control the model's "thinking" process by injecting specific tags into the prompt. This is useful when Qwen3 models are accessed via providers like Ollama or Hugging Face Inference Endpoints, where direct manipulation of `tokenizer.apply_chat_template` parameters (like `enable_thinking`) is not possible through LiteLLM.
 
 You can control this behavior using two parameters in your `litellm.completion()` call: `qwen_enable_thinking` and `qwen_use_empty_think_tags`.
 
@@ -96,7 +96,7 @@ import litellm
 
 # Example: Force thinking tag
 response_force_think = litellm.completion(
-    model="ollama/qwen2.5:7b", # Or any Qwen3-era model
+    model="ollama/qwen3:7b", # Or any Qwen3 model
     messages=[{"role": "user", "content": "Explain general relativity in simple terms."}],
     qwen_enable_thinking=True
 )
@@ -113,7 +113,7 @@ response_empty_tags = litellm.completion(
 
 # Example: Combine both
 response_combined = litellm.completion(
-    model="ollama/qwen2.5:7b",
+    model="ollama/qwen3:7b", # Or any Qwen3 model
     messages=[{"role": "user", "content": "Suggest three innovative uses for graphene."}],
     qwen_enable_thinking=True,
     qwen_use_empty_think_tags=True

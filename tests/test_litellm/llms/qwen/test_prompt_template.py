@@ -5,9 +5,9 @@ from litellm.llms.qwen.prompt_template import qwen_thinking_prompt_modifier, is_
 @pytest.mark.parametrize("model_name, expected", [
     ("qwen3", True),
     ("qwen3-7b-instruct", True),
-    ("qwen2.5", True),
     ("Qwen3/qwen3-7b-chat", True),
-    ("vendor/qwen2.5-instruct", True),
+    ("qwen2.5", False), # Changed expectation
+    ("vendor/qwen2.5-instruct", False), # Changed expectation
     ("qwen2", False),
     ("qwen1.5-7b", False),
     ("llama3-8b", False),
