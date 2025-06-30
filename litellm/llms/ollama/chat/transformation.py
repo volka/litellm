@@ -271,11 +271,18 @@ class OllamaChatConfig(BaseConfig):
         function_name = optional_params.pop("function_name", None)
         litellm_params["function_name"] = function_name
         tools = optional_params.pop("tools", None)
-        qwen_thinking_mode = optional_params.pop("qwen_thinking_mode", "auto")
+
+        # New parameters for Qwen3 thinking mode
+        qwen_enable_thinking = optional_params.pop("qwen_enable_thinking", None)
+        qwen_use_empty_think_tags = optional_params.pop("qwen_use_empty_think_tags", False)
 
         processed_messages = messages
-        if is_qwen3_model(model) and qwen_thinking_mode != "auto":
-            processed_messages = qwen_thinking_prompt_modifier(messages, qwen_thinking_mode)
+        if is_qwen3_model(model) and (qwen_enable_thinking is not None or qwen_use_empty_think_tags):
+            processed_messages = qwen_thinking_prompt_modifier(
+                messages,
+                qwen_enable_thinking=qwen_enable_thinking,
+                qwen_use_empty_think_tags=qwen_use_empty_think_tags
+            )
 
         new_messages = []
         for m in processed_messages: # Iterate over potentially modified messages

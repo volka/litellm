@@ -138,7 +138,9 @@ class HuggingFaceChatConfig(OpenAIGPTConfig):
         litellm_params: dict,
         headers: dict,
     ) -> dict:
-        qwen_thinking_mode = optional_params.pop("qwen_thinking_mode", "auto")
+        # New parameters for Qwen3 thinking mode
+        qwen_enable_thinking = optional_params.pop("qwen_enable_thinking", None)
+        qwen_use_empty_think_tags = optional_params.pop("qwen_use_empty_think_tags", False)
 
         processed_messages = messages
         # Determine the actual model_id that will be used for the HF provider
@@ -149,9 +151,12 @@ class HuggingFaceChatConfig(OpenAIGPTConfig):
             if len(parts) > 1:
                 temp_model_id_for_check = "/".join(parts[1:]) # Get "Qwen/Qwen1.5-7B-Chat"
 
-
-        if is_qwen3_model(temp_model_id_for_check) and qwen_thinking_mode != "auto":
-            processed_messages = qwen_thinking_prompt_modifier(messages, qwen_thinking_mode)
+        if is_qwen3_model(temp_model_id_for_check) and (qwen_enable_thinking is not None or qwen_use_empty_think_tags):
+            processed_messages = qwen_thinking_prompt_modifier(
+                messages,
+                qwen_enable_thinking=qwen_enable_thinking,
+                qwen_use_empty_think_tags=qwen_use_empty_think_tags
+            )
 
         if litellm_params.get("api_base"):
             return dict(

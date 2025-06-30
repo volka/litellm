@@ -87,33 +87,51 @@ Here's the code for how we format all providers. Let us know how we can improve 
 
 ## Qwen3 Model Thinking Tags
 
-For Qwen3-era models (e.g., models with "qwen3" or "qwen2.5" in their names), LiteLLM provides a way to control the model's "thinking" process by injecting specific tags into the prompt. This is useful when Qwen3 models are accessed via providers like Ollama or Hugging Face Inference Endpoints, where direct manipulation of `tokenizer.apply_chat_template` parameters is not possible through LiteLLM.
+For Qwen3-era models (e.g., models with "qwen3" or "qwen2.5" in their names), LiteLLM provides a way to control the model's "thinking" process by injecting specific tags into the prompt. This is useful when Qwen3 models are accessed via providers like Ollama or Hugging Face Inference Endpoints, where direct manipulation of `tokenizer.apply_chat_template` parameters (like `enable_thinking`) is not possible through LiteLLM.
 
-You can control this behavior using the `qwen_thinking_mode` parameter in your `litellm.completion()` call:
+You can control this behavior using two parameters in your `litellm.completion()` call: `qwen_enable_thinking` and `qwen_use_empty_think_tags`.
 
 ```python
 import litellm
 
-response = litellm.completion(
+# Example: Force thinking tag
+response_force_think = litellm.completion(
     model="ollama/qwen2.5:7b", # Or any Qwen3-era model
     messages=[{"role": "user", "content": "Explain general relativity in simple terms."}],
-    qwen_thinking_mode="force_think"
+    qwen_enable_thinking=True
 )
+# The prompt sent to the model will have "/think" prepended to the user's content.
 
-print(response.choices[0].message.content)
+# Example: Enable empty think tags for the assistant
+response_empty_tags = litellm.completion(
+    model="ollama/qwen3:7b",
+    messages=[{"role": "user", "content": "What are the pros and cons of nuclear energy?"}],
+    qwen_use_empty_think_tags=True
+)
+# The prompt sent to the model will include an additional assistant message like:
+# {"role": "assistant", "content": "<think>\\n</think>"}
+
+# Example: Combine both
+response_combined = litellm.completion(
+    model="ollama/qwen2.5:7b",
+    messages=[{"role": "user", "content": "Suggest three innovative uses for graphene."}],
+    qwen_enable_thinking=True,
+    qwen_use_empty_think_tags=True
+)
+# The user's message will be prepended with "/think", and an assistant <think></think> block will be added.
 ```
 
-### `qwen_thinking_mode` Parameter Values:
+### Parameters:
 
-*   `"auto"` (Default):
-    *   No modifications are made to the prompt. LiteLLM sends the messages as is.
-*   `"force_think"`:
-    *   Prepends `/think\n` to the content of the last user message in the conversation history.
-    *   Example: If the last user message is `{"role": "user", "content": "Hello"}`, it becomes `{"role": "user", "content": "/think\nHello"}`.
-    *   If the last message in the history is not from the user, this mode will attempt to find the most recent user message and prepend the tag there. If no user message exists, no tag is added by this mode.
-*   `"force_no_think"`:
-    *   Similar to `force_think`, but prepends `/no_think\n` to the content of the last user message.
-*   `"enable_empty_think_tags"`:
-    *   Appends a new assistant message `{"role": "assistant", "content": "<think>\\n</think>"}` to the end of the messages list. This prompts the model to fill in its thinking process within these tags.
+*   **`qwen_enable_thinking: Optional[bool]`** (Default: `None`)
+    *   If `True`: Prepends the `/think\n` tag to the content of the last user message in the conversation history. This encourages the model to "think" or show its reasoning process using this specific tag.
+        *   Example: If the last user message is `{"role": "user", "content": "Hello"}`, its content becomes `"/think\nHello"`.
+    *   If `False`: Prepends the `/no_think\n` tag to the content of the last user message. This discourages the model from overtly showing a "thinking" step with the `/think` tag.
+    *   If `None` (default): No `/think` or `/no_think` tag is added based on this parameter.
+    *   *Note:* If no user message exists in the history, setting this parameter will not add these tags to any message.
 
-This feature allows for more fine-grained control over Qwen3 model behavior when direct access to its tokenizer's thinking parameters is unavailable through the serving endpoint.
+*   **`qwen_use_empty_think_tags: bool`** (Default: `False`)
+    *   If `True`: Appends a new assistant message `{"role": "assistant", "content": "<think>\\n</think>"}` to the end of the messages list. This prompts the model to fill in its thinking process within these XML-style tags, as per one of the Qwen3 model's documented mechanisms.
+    *   This parameter can be used independently of or in conjunction with `qwen_enable_thinking`.
+
+This feature allows for more fine-grained control over Qwen3 model behavior when direct access to its tokenizer's thinking parameters is unavailable through the serving endpoint (e.g., when using Ollama or standard Hugging Face Inference Endpoints).
