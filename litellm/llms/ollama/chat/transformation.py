@@ -27,6 +27,7 @@ from litellm.types.llms.openai import (
 from litellm.types.utils import ModelResponse, ModelResponseStream
 
 from ..common_utils import OllamaError
+from litellm.llms.qwen.prompt_template import qwen_thinking_prompt_modifier, is_qwen3_model
 
 if TYPE_CHECKING:
     from litellm.litellm_core_utils.litellm_logging import Logging as _LiteLLMLoggingObj
@@ -270,9 +271,14 @@ class OllamaChatConfig(BaseConfig):
         function_name = optional_params.pop("function_name", None)
         litellm_params["function_name"] = function_name
         tools = optional_params.pop("tools", None)
+        qwen_thinking_mode = optional_params.pop("qwen_thinking_mode", "auto")
+
+        processed_messages = messages
+        if is_qwen3_model(model) and qwen_thinking_mode != "auto":
+            processed_messages = qwen_thinking_prompt_modifier(messages, qwen_thinking_mode)
 
         new_messages = []
-        for m in messages:
+        for m in processed_messages: # Iterate over potentially modified messages
             if isinstance(
                 m, BaseModel
             ):  # avoid message serialization issues - https://github.com/BerriAI/litellm/issues/5319
@@ -298,7 +304,7 @@ class OllamaChatConfig(BaseConfig):
 
         data = {
             "model": model,
-            "messages": new_messages,
+            "messages": new_messages, # Use the processed messages
             "options": optional_params,
             "stream": stream,
         }

@@ -84,3 +84,36 @@ Here's the code for how we format all providers. Let us know how we can improve 
 | Palm | all model names starting with `palm/` | [Code](https://github.com/BerriAI/litellm/blob/721564c63999a43f96ee9167d0530759d51f8d45/litellm/llms/palm.py#L95)
 | NLP Cloud | all model names starting with `palm/` | [Code](https://github.com/BerriAI/litellm/blob/721564c63999a43f96ee9167d0530759d51f8d45/litellm/llms/nlp_cloud.py#L120)
 | Petals | all model names starting with `petals/` | [Code](https://github.com/BerriAI/litellm/blob/721564c63999a43f96ee9167d0530759d51f8d45/litellm/llms/petals.py#L87)
+
+## Qwen3 Model Thinking Tags
+
+For Qwen3-era models (e.g., models with "qwen3" or "qwen2.5" in their names), LiteLLM provides a way to control the model's "thinking" process by injecting specific tags into the prompt. This is useful when Qwen3 models are accessed via providers like Ollama or Hugging Face Inference Endpoints, where direct manipulation of `tokenizer.apply_chat_template` parameters is not possible through LiteLLM.
+
+You can control this behavior using the `qwen_thinking_mode` parameter in your `litellm.completion()` call:
+
+```python
+import litellm
+
+response = litellm.completion(
+    model="ollama/qwen2.5:7b", # Or any Qwen3-era model
+    messages=[{"role": "user", "content": "Explain general relativity in simple terms."}],
+    qwen_thinking_mode="force_think"
+)
+
+print(response.choices[0].message.content)
+```
+
+### `qwen_thinking_mode` Parameter Values:
+
+*   `"auto"` (Default):
+    *   No modifications are made to the prompt. LiteLLM sends the messages as is.
+*   `"force_think"`:
+    *   Prepends `/think\n` to the content of the last user message in the conversation history.
+    *   Example: If the last user message is `{"role": "user", "content": "Hello"}`, it becomes `{"role": "user", "content": "/think\nHello"}`.
+    *   If the last message in the history is not from the user, this mode will attempt to find the most recent user message and prepend the tag there. If no user message exists, no tag is added by this mode.
+*   `"force_no_think"`:
+    *   Similar to `force_think`, but prepends `/no_think\n` to the content of the last user message.
+*   `"enable_empty_think_tags"`:
+    *   Appends a new assistant message `{"role": "assistant", "content": "<think>\\n</think>"}` to the end of the messages list. This prompts the model to fill in its thinking process within these tags.
+
+This feature allows for more fine-grained control over Qwen3 model behavior when direct access to its tokenizer's thinking parameters is unavailable through the serving endpoint.

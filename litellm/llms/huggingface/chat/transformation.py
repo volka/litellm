@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 import httpx
 
 from litellm.types.llms.openai import AllMessageValues, ChatCompletionRequest
+from litellm.llms.qwen.prompt_template import qwen_thinking_prompt_modifier, is_qwen3_model
 
 if TYPE_CHECKING:
     from litellm.litellm_core_utils.litellm_logging import Logging as LiteLLMLoggingObj
@@ -137,13 +138,29 @@ class HuggingFaceChatConfig(OpenAIGPTConfig):
         litellm_params: dict,
         headers: dict,
     ) -> dict:
+        qwen_thinking_mode = optional_params.pop("qwen_thinking_mode", "auto")
+
+        processed_messages = messages
+        # Determine the actual model_id that will be used for the HF provider
+        # This is needed for is_qwen3_model check if 'model' is like 'huggingface/Qwen/Qwen2-7B-Instruct'
+        temp_model_id_for_check = model
+        if "/" in model: # e.g. huggingface/Qwen/Qwen1.5-7B-Chat
+            parts = model.split('/')
+            if len(parts) > 1:
+                temp_model_id_for_check = "/".join(parts[1:]) # Get "Qwen/Qwen1.5-7B-Chat"
+
+
+        if is_qwen3_model(temp_model_id_for_check) and qwen_thinking_mode != "auto":
+            processed_messages = qwen_thinking_prompt_modifier(messages, qwen_thinking_mode)
+
         if litellm_params.get("api_base"):
             return dict(
-                ChatCompletionRequest(model=model, messages=messages, **optional_params)
+                ChatCompletionRequest(model=model, messages=processed_messages, **optional_params)
             )
         if "max_retries" in optional_params:
             logger.warning("`max_retries` is not supported. It will be ignored.")
             optional_params.pop("max_retries", None)
+
         first_part, remaining = model.split("/", 1)
         if "/" in remaining:
             provider = first_part
@@ -151,6 +168,7 @@ class HuggingFaceChatConfig(OpenAIGPTConfig):
         else:
             provider = "hf-inference"
             model_id = model
+
         provider_mapping = _fetch_inference_provider_mapping(model_id)
         if provider not in provider_mapping:
             raise HuggingFaceError(
@@ -164,9 +182,12 @@ class HuggingFaceChatConfig(OpenAIGPTConfig):
                 f"Model {model_id} is in staging mode for provider {provider}. Meant for test purposes only."
             )
         mapped_model = provider_mapping["providerId"]
-        messages = self._transform_messages(messages=messages, model=mapped_model)
+
+        # Use processed_messages that might have been modified for Qwen3 thinking mode
+        transformed_hf_messages = self._transform_messages(messages=processed_messages, model=mapped_model)
+
         return dict(
             ChatCompletionRequest(
-                model=mapped_model, messages=messages, **optional_params
+                model=mapped_model, messages=transformed_hf_messages, **optional_params
             )
         )
